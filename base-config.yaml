@@ -19,7 +19,7 @@ invite_message: |
 
 # Message to send to users from non-whitelisted homeservers
 non_whitelisted_message: |
-    Hi {user}, welcome! Please note that direct messaging is not supported for your homeserver.
+    Hi {user}, Are you Lost? Message the Admin to receive an invite. You'll need to explain who you are and when you joined the community.
 
 # List of whitelisted homeservers
 whitelisted_homeservers:
