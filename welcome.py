@@ -16,6 +16,7 @@ class Config(BaseProxyConfig):
         helper.copy("message")
         helper.copy("notification_room")
         helper.copy("notification_message")
+        helper.copy("invite_message")
 
 
 class Greeter(Plugin):
@@ -35,14 +36,18 @@ class Greeter(Plugin):
                 pill = '<a href="https://matrix.to/#/{mxid}">{nick}</a>'.format(mxid=evt.sender, nick=nick)
                 msg = self.config["message"].format(user=pill) 
                 await self.client.send_notice(evt.room_id, html=msg) 
+                
+                # Send notification to the notification room
                 if self.config["notification_room"]:
                     roomnamestate = await self.client.get_state_event(evt.room_id, 'm.room.name')
                     roomname = roomnamestate['name']
                     notification_message = self.config['notification_message'].format(user=evt.sender, 
                                                                                       room=roomname)
                     await self.client.send_notice(self.config["notification_room"], html=notification_message)
-
-
+                
+                # Send a direct message to the user
+                invite_message = self.config["invite_message"].format(user=pill)
+                await self.client.send_text(evt.sender, invite_message)
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
