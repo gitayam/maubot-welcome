@@ -4,7 +4,8 @@ rooms:
 
 # add a room ID here to send a message to when someone joins the above rooms
 # (optional)
-notification_room: 
+notification_room:
+  - '!notifyroom:example.com'
 
 # if using notification_room above, format the message you'd like to send to it
 # you may use the {user} variable for the full matrix ID of the user, and {room} 
@@ -19,3 +20,7 @@ notification_message: |
 message: |
     Welcome {user}! Please be sure to read the topic for helpful links and information.
     Use <a href="https://google.com">Google</a> for all other queries ;)
+
+# direct message to the joining user
+invite_message: |
+    Hi {user}, welcome to the room! Feel free to ask any questions or introduce yourself.
