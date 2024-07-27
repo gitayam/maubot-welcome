@@ -13,6 +13,8 @@ class Config(BaseProxyConfig):
         helper.copy("notification_room")
         helper.copy("notification_message")
         helper.copy("invite_message")
+        helper.copy("non_whitelisted_message")
+        helper.copy("whitelisted_homeservers")
 
 class Greeter(Plugin):
 
@@ -66,7 +68,7 @@ class Greeter(Plugin):
                 self.log.debug("Ignoring state event")
                 return
             else:
-                self.log.debug("Waiting 5 seconds before sending the message")
+                self.log.debug("Waiting 5 seconds before sending the welcome message")
                 await asyncio.sleep(5)
                 
                 nick = self.client.parse_user_id(evt.sender)[0]
@@ -76,6 +78,7 @@ class Greeter(Plugin):
                 self.log.debug(f"Formatted welcome message: {msg}")
                 await self.send_if_member(evt.room_id, msg)
 
+                # Notify the notification room
                 if self.config["notification_room"]:
                     self.log.debug(f"Sending notification to room {self.config['notification_room']}")
                     roomnamestate = await self.client.get_state_event(evt.room_id, 'm.room.name')
@@ -84,9 +87,16 @@ class Greeter(Plugin):
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
-                invite_message = self.config["invite_message"].format(user=nick)
-                self.log.debug(f"Formatted invite message: {invite_message}")
-                await self.send_direct_message(evt.sender, invite_message)
+                # Check if the user's homeserver is whitelisted
+                homeserver = evt.sender.split(':')[1]
+                if homeserver in self.config["whitelisted_homeservers"]:
+                    invite_message = self.config["invite_message"].format(user=nick)
+                    self.log.debug(f"Formatted invite message: {invite_message}")
+                    await self.send_direct_message(evt.sender, invite_message)
+                else:
+                    non_whitelisted_message = self.config["non_whitelisted_message"].format(user=nick)
+                    self.log.debug(f"Formatted non-whitelisted message: {non_whitelisted_message}")
+                    await self.send_if_member(evt.room_id, non_whitelisted_message)
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
