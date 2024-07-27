@@ -90,7 +90,13 @@ class Greeter(Plugin):
                     self.log.debug(f"Sending notification to room {self.config['notification_room']}")
                     roomnamestate = await self.client.get_state_event(evt.room_id, 'm.room.name')
                     roomname = roomnamestate.get('name', evt.room_id)  # Use room_id if name is not available
-                    notification_message = self.config['notification_message'].format(user=user_link, room=room_link)
+
+                    # Include whether the user is from a whitelisted homeserver in the notification message
+                    notification_message = self.config['notification_message'].format(
+                        user=user_link,
+                        room=room_link,
+                        homeserver_status=("whitelisted" if homeserver in self.config["whitelisted_homeservers"] else "non-whitelisted")
+                    )
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
