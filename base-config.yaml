@@ -3,13 +3,26 @@ rooms:
   - '!otherroom:example.com'
 
 notification_room: '!notifyroom:example.com' # Room to send notifications to
+
 # Notification message to send to the notification room to alert mods or admin
 notification_message: |
     User {user} has joined {room}.
+
 # Welcome message to send to users when they join a room
 message: |
     Welcome {user}! Please be sure to read the topic for helpful links and information.
     Use <a href="https://google.com">Google</a> for all other queries ;)
-# Direct message to send to users when they join a room
+
+# Direct message to send to users from whitelisted homeservers
 invite_message: |
     Hi {user}, welcome to the room! Feel free to ask any questions or introduce yourself.
+
+# Message to send to users from non-whitelisted homeservers
+non_whitelisted_message: |
+    Hi {user}, welcome! Please note that direct messaging is not supported for your homeserver.
+
+# List of whitelisted homeservers
+whitelisted_homeservers:
+  - 'example.com'
+  - 'matrix.org'
+  - 'localhost'
