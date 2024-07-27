@@ -1,10 +1,14 @@
 maubot: 0.1.0
-id: org.jobmachine.welcome.new
-version: 0.0.4.3
+id: org.irregularchat.welcome
+version: 0.0.4.9.1
 license: MIT
 modules:
   - welcome
 main_class: Greeter
 extra_files:
   - base-config.yaml
+dependencies:
+  - mautrix>=0.10.0
+config: true
+webapp: false
 database: false

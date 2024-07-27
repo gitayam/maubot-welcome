@@ -1,7 +1,7 @@
 from typing import Type
 import asyncio
-from mautrix.client import Client, InternalEventType, MembershipEventDispatcher, SyncStream
-from mautrix.types import Event, StateEvent, RoomID, UserID
+from mautrix.client import InternalEventType, MembershipEventDispatcher, SyncStream
+from mautrix.types import StateEvent, RoomID, UserID
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 from maubot import Plugin
 from maubot.handlers import event
@@ -50,9 +50,9 @@ class Greeter(Plugin):
 
     async def send_direct_message(self, user_id: UserID, message: str) -> None:
         try:
-            self.log.debug(f"Ensuring direct message room with user {user_id}")
-            room_id = await self.retry(self.client.ensure_dm, user_id)
-            self.log.debug(f"Direct message room ID: {room_id}")
+            self.log.debug(f"Creating direct message room with user {user_id}")
+            room_id = await self.retry(self.client.create_room, invitees=[user_id], is_direct=True)
+            self.log.debug(f"Created direct message room ID: {room_id}")
             await self.retry(self.client.send_text, room_id, message)
             self.log.debug(f"Sent direct message to {user_id}")
         except Exception as e:
