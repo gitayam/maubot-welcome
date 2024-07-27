@@ -12,4 +12,10 @@ message: |
     Use <a href="https://google.com">Google</a> for all other queries ;)
 # Direct message to send to users when they join a room
 invite_message: |
-    Hi {user}, welcome to the room! Feel free to ask any questions or introduce yourself.
+    Hi {user}, welcome to the room! Here is your invite link: {invite_link}
+    Feel free to ask any questions or introduce yourself.
+
+sso_details:
+  API_URL: "https://sso.domain.tld/api/v3"
+  AUTHENTIK_API_TOKEN: "secret_here"
+  MAIN_GROUP_ID: "group_id_here"

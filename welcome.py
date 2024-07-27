@@ -1,10 +1,13 @@
 from typing import Type
 import asyncio
+import os
+from datetime import datetime, timedelta, timezone
 from mautrix.client import InternalEventType, MembershipEventDispatcher, SyncStream
 from mautrix.types import StateEvent, RoomID, UserID
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 from maubot import Plugin
 from maubot.handlers import event
+import requests
 
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
@@ -13,6 +16,7 @@ class Config(BaseProxyConfig):
         helper.copy("notification_room")
         helper.copy("notification_message")
         helper.copy("invite_message")
+        helper.copy("sso_details")
 
 class Greeter(Plugin):
 
@@ -58,6 +62,40 @@ class Greeter(Plugin):
         except Exception as e:
             self.log.error(f"Failed to send direct message to {user_id}: {e}")
 
+    async def create_invite(self, name: str, expires=None) -> str:
+        self.log.debug("Creating an invite link")
+        sso_details = self.config["sso_details"]
+        API_URL = sso_details["API_URL"]
+        AUTHENTIK_API_TOKEN = sso_details["AUTHENTIK_API_TOKEN"]
+        headers = {
+            "Authorization": f"Bearer {AUTHENTIK_API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+        current_time_str = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')
+        if not name:
+            name = current_time_str
+        else:
+            name = f"{name}-{current_time_str}"
+        
+        if expires is None:
+            expires = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+        
+        data = {
+            "name": name,
+            "expires": expires,
+            "fixed_data": {},
+            "single_use": True,
+            "flow": "41a44b0e-1d06-4551-9ec1-41bd793b6f27"  # Replace with the actual flow ID if needed
+        }
+        
+        url = f"{API_URL}/stages/invitation/invitations/"
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 403:
+            self.log.error(f"403 Forbidden Error: Check if the API token has the necessary permissions to access {url}")
+        response.raise_for_status()
+        return response.json()['pk']
+
     @event.on(InternalEventType.JOIN)
     async def greet(self, evt: StateEvent) -> None:
         self.log.debug(f"User {evt.sender} joined room {evt.room_id}")
@@ -66,26 +104,34 @@ class Greeter(Plugin):
                 self.log.debug("Ignoring state event")
                 return
             else:
-                self.log.debug("Waiting 5 seconds before sending the message")
-                await asyncio.sleep(5)
+                self.log.debug("Starting invite creation in the background")
+                invite_task = asyncio.create_task(self.create_invite(f"invite-{evt.sender}"))
                 
+                self.log.debug("Waiting 5 seconds before sending the welcome message")
+                await asyncio.sleep(5)
+
                 nick = self.client.parse_user_id(evt.sender)[0]
                 user_link = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
                 room_link = f'<a href="https://matrix.to/#/{evt.room_id}">{evt.room_id}</a>'
                 msg = self.config["message"].format(user=user_link)
                 self.log.debug(f"Formatted welcome message: {msg}")
                 await self.send_if_member(evt.room_id, msg)
-
+                
                 if self.config["notification_room"]:
-                    self.log.debug(f"Sending notification to room {self.config['notification_room']}")
+                    self.log.debug("Sending notification to room")
                     roomnamestate = await self.client.get_state_event(evt.room_id, 'm.room.name')
                     roomname = roomnamestate.get('name', evt.room_id)  # Use room_id if name is not available
                     notification_message = self.config['notification_message'].format(user=user_link, room=room_link)
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
-                invite_message = self.config["invite_message"].format(user=nick)
-                self.log.debug(f"Formatted invite message: {invite_message}")
+                self.log.debug("Waiting for the invite link to be created")
+                invite_id = await invite_task
+                sso_details = self.config["sso_details"]
+                base_domain = sso_details["API_URL"].split("//")[1].split("/")[0]
+                invite_link = f"https://sso.{base_domain}/if/flow/simple-enrollment-flow/?itoken={invite_id}"
+                invite_message = self.config["invite_message"].format(user=nick, invite_link=invite_link)
+                self.log.debug(f"Formatted invite message with link: {invite_message}")
                 await self.send_direct_message(evt.sender, invite_message)
 
     @classmethod
