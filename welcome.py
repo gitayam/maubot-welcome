@@ -74,8 +74,15 @@ class Greeter(Plugin):
                 nick = self.client.parse_user_id(evt.sender)[0]
                 user_link = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
                 room_link = f'<a href="https://matrix.to/#/{evt.room_id}">{evt.room_id}</a>'
-                msg = self.config["message"].format(user=user_link)
-                self.log.debug(f"Formatted welcome message: {msg}")
+                homeserver = evt.sender.split(':')[1]
+
+                if homeserver in self.config["whitelisted_homeservers"]:
+                    msg = self.config["message"].format(user=user_link)
+                    self.log.debug(f"Formatted welcome message for whitelisted user: {msg}")
+                else:
+                    msg = self.config["non_whitelisted_message"].format(user=user_link)
+                    self.log.debug(f"Formatted welcome message for non-whitelisted user: {msg}")
+                
                 await self.send_if_member(evt.room_id, msg)
 
                 # Notify the notification room
@@ -87,16 +94,11 @@ class Greeter(Plugin):
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
-                # Check if the user's homeserver is whitelisted
-                homeserver = evt.sender.split(':')[1]
+                # Send direct message only if the user's homeserver is whitelisted
                 if homeserver in self.config["whitelisted_homeservers"]:
                     invite_message = self.config["invite_message"].format(user=nick)
                     self.log.debug(f"Formatted invite message: {invite_message}")
                     await self.send_direct_message(evt.sender, invite_message)
-                else:
-                    non_whitelisted_message = self.config["non_whitelisted_message"].format(user=nick)
-                    self.log.debug(f"Formatted non-whitelisted message: {non_whitelisted_message}")
-                    await self.send_if_member(evt.room_id, non_whitelisted_message)
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
