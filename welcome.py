@@ -70,20 +70,21 @@ class Greeter(Plugin):
                 await asyncio.sleep(5)
                 
                 nick = self.client.parse_user_id(evt.sender)[0]
-                pill = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
-                msg = self.config["message"].format(user=pill)
+                user_link = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
+                room_link = f'<a href="https://matrix.to/#/{evt.room_id}">{evt.room_id}</a>'
+                msg = self.config["message"].format(user=user_link)
                 self.log.debug(f"Formatted welcome message: {msg}")
                 await self.send_if_member(evt.room_id, msg)
 
                 if self.config["notification_room"]:
                     self.log.debug(f"Sending notification to room {self.config['notification_room']}")
                     roomnamestate = await self.client.get_state_event(evt.room_id, 'm.room.name')
-                    roomname = roomnamestate['name']
-                    notification_message = self.config['notification_message'].format(user=evt.sender, room=roomname)
+                    roomname = roomnamestate.get('name', evt.room_id)  # Use room_id if name is not available
+                    notification_message = self.config['notification_message'].format(user=user_link, room=room_link)
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
-                invite_message = self.config["invite_message"].format(user=pill)
+                invite_message = self.config["invite_message"].format(user=nick)
                 self.log.debug(f"Formatted invite message: {invite_message}")
                 await self.send_direct_message(evt.sender, invite_message)
 

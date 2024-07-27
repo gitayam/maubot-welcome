@@ -2,25 +2,14 @@ rooms:
   - '!someroom:example.com'
   - '!otherroom:example.com'
 
-# add a room ID here to send a message to when someone joins the above rooms
-# (optional)
-notification_room:
-  - '!notifyroom:example.com'
-
-# if using notification_room above, format the message you'd like to send to it
-# you may use the {user} variable for the full matrix ID of the user, and {room} 
-# for the room name in your message
-# html formatting is supported
+notification_room: '!notifyroom:example.com' # Room to send notifications to
+# Notification message to send to the notification room to alert mods or admin
 notification_message: |
-    User <code>{user}</code> has joined <code>{room}</code>.
-
-# you can use {user} to reference the joining user in this message using a
-# matrix.to link (rendered as a "pill" in element clients)
-# html formatting is supported
+    User {user} has joined {room}.
+# Welcome message to send to users when they join a room
 message: |
     Welcome {user}! Please be sure to read the topic for helpful links and information.
     Use <a href="https://google.com">Google</a> for all other queries ;)
-
-# direct message to the joining user
+# Direct message to send to users when they join a room
 invite_message: |
     Hi {user}, welcome to the room! Feel free to ask any questions or introduce yourself.

@@ -1,6 +1,6 @@
 maubot: 0.1.0
 id: org.irregularchat.welcome
-version: 0.0.4.9.1
+version: 0.0.4.9.5
 license: MIT
 modules:
   - welcome
