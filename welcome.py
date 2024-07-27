@@ -30,12 +30,31 @@ class Greeter(Plugin):
     async def send_if_member(self, room_id: RoomID, message: str) -> None:
         try:
             joined_rooms = await self.client.get_joined_rooms()
-            if room_id in joined_rooms.rooms:
+            if room_id in joined_rooms:
                 await self.client.send_notice(room_id, html=message)
             else:
                 self.log.error(f"Bot is not a member of the room {room_id}")
         except Exception as e:
             self.log.error(f"Failed to send message to {room_id}: {e}")
+
+    async def send_direct_message(self, user_id: UserID, message: str) -> None:
+        try:
+            # Check if there is already a direct message room with the user
+            existing_dm_rooms = await self.client.get_dm_rooms()
+            dm_room_id = None
+            for room_id, users in existing_dm_rooms.items():
+                if user_id in users:
+                    dm_room_id = room_id
+                    break
+            
+            # If no existing DM room, create a new one
+            if not dm_room_id:
+                response = await self.client.create_room(invitees=[user_id])
+                dm_room_id = response.room_id
+
+            await self.client.send_text(dm_room_id, message)
+        except Exception as e:
+            self.log.error(f"Failed to send direct message to {user_id}: {e}")
 
     @event.on(InternalEventType.JOIN)
     async def greet(self, evt: StateEvent) -> None:
@@ -57,13 +76,9 @@ class Greeter(Plugin):
                     notification_message = self.config['notification_message'].format(user=evt.sender, room=roomname)
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
-                # Create a direct message room and send a direct message to the user
-                try:
-                    dm_room_id = await self.client.create_dm(evt.sender)
-                    invite_message = self.config["invite_message"].format(user=pill)
-                    await self.client.send_text(dm_room_id, invite_message)
-                except Exception as e:
-                    self.log.error(f"Failed to send direct message to {evt.sender}: {e}")
+                # Send a direct message to the user
+                invite_message = self.config["invite_message"].format(user=pill)
+                await self.send_direct_message(evt.sender, invite_message)
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
