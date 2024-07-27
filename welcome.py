@@ -60,14 +60,6 @@ class Greeter(Plugin):
         except Exception as e:
             self.log.error(f"Failed to send direct message to {user_id}: {e}")
 
-    async def check_user_in_room(self, user_id: UserID, room_id: RoomID) -> bool:
-        try:
-            members = await self.retry(self.client.get_room_members, room_id)
-            return user_id in members
-        except Exception as e:
-            self.log.error(f"Failed to check if user {user_id} is in room {room_id}: {e}")
-            return False
-
     @event.on(InternalEventType.JOIN)
     async def greet(self, evt: StateEvent) -> None:
         self.log.debug(f"User {evt.sender} joined room {evt.room_id}")
@@ -76,27 +68,10 @@ class Greeter(Plugin):
                 self.log.debug("Ignoring state event")
                 return
             else:
-                self.log.debug("Waiting 10 seconds before sending the welcome message")
-                await asyncio.sleep(10)
-                
-                # Check if user is present in the room
-                if not await self.check_user_in_room(evt.sender, evt.room_id):
-                    self.log.debug(f"User {evt.sender} is not present in room {evt.room_id}")
-                    return
-                
                 nick = self.client.parse_user_id(evt.sender)[0]
                 user_link = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
                 room_link = f'<a href="https://matrix.to/#/{evt.room_id}">{evt.room_id}</a>'
                 homeserver = evt.sender.split(':')[1]
-
-                if homeserver in self.config["whitelisted_homeservers"]:
-                    msg = self.config["message"].format(user=user_link)
-                    self.log.debug(f"Formatted welcome message for whitelisted user: {msg}")
-                else:
-                    msg = self.config["non_whitelisted_message"].format(user=user_link)
-                    self.log.debug(f"Formatted welcome message for non-whitelisted user: {msg}")
-                
-                await self.send_if_member(evt.room_id, msg)
 
                 # Notify the notification room
                 if self.config["notification_room"]:
@@ -112,12 +87,22 @@ class Greeter(Plugin):
                     )
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
-                
-                # Send direct message only if the user's homeserver is whitelisted
+
+                self.log.debug("Waiting 12 seconds before sending the welcome message")
+                await asyncio.sleep(12)
+
                 if homeserver in self.config["whitelisted_homeservers"]:
+                    msg = self.config["message"].format(user=user_link)
+                    self.log.debug(f"Formatted welcome message for whitelisted user: {msg}")
+                    await self.send_if_member(evt.room_id, msg)
+
                     invite_message = self.config["invite_message"].format(user=nick)
                     self.log.debug(f"Formatted invite message: {invite_message}")
                     await self.send_direct_message(evt.sender, invite_message)
+                else:
+                    msg = self.config["non_whitelisted_message"].format(user=user_link)
+                    self.log.debug(f"Formatted welcome message for non-whitelisted user: {msg}")
+                    await self.send_if_member(evt.room_id, msg)
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
