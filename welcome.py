@@ -29,8 +29,8 @@ class Greeter(Plugin):
 
     async def send_if_member(self, room_id: RoomID, message: str) -> None:
         try:
-            # Ensure the bot is a member of the room before sending a message
-            if room_id in (await self.client.get_joined_rooms()).rooms:
+            joined_rooms = await self.client.get_joined_rooms()
+            if room_id in joined_rooms.rooms:
                 await self.client.send_notice(room_id, html=message)
             else:
                 self.log.error(f"Bot is not a member of the room {room_id}")
@@ -57,9 +57,13 @@ class Greeter(Plugin):
                     notification_message = self.config['notification_message'].format(user=evt.sender, room=roomname)
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
                 
-                # Send a direct message to the user
-                invite_message = self.config["invite_message"].format(user=pill)
-                await self.client.send_text(evt.sender, invite_message)
+                # Create a direct message room and send a direct message to the user
+                try:
+                    dm_room_id = await self.client.create_dm(evt.sender)
+                    invite_message = self.config["invite_message"].format(user=pill)
+                    await self.client.send_text(dm_room_id, invite_message)
+                except Exception as e:
+                    self.log.error(f"Failed to send direct message to {evt.sender}: {e}")
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
