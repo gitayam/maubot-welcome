@@ -88,8 +88,8 @@ class Greeter(Plugin):
                     self.log.debug(f"Formatted notification message: {notification_message}")
                     await self.send_if_member(RoomID(self.config["notification_room"]), notification_message)
 
-                self.log.debug("Waiting 12 seconds before sending the welcome message")
-                await asyncio.sleep(12)
+                self.log.debug("Waiting 10 seconds before sending the welcome message")
+                await asyncio.sleep(10)
 
                 if homeserver in self.config["whitelisted_homeservers"]:
                     msg = self.config["message"].format(user=user_link)
