@@ -68,8 +68,8 @@ class Greeter(Plugin):
                 self.log.debug("Ignoring state event")
                 return
             else:
-                self.log.debug("Waiting 5 seconds before sending the welcome message")
-                await asyncio.sleep(5)
+                self.log.debug("Waiting 7 seconds before sending the welcome message")
+                await asyncio.sleep(7)
                 
                 nick = self.client.parse_user_id(evt.sender)[0]
                 user_link = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
