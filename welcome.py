@@ -60,6 +60,14 @@ class Greeter(Plugin):
         except Exception as e:
             self.log.error(f"Failed to send direct message to {user_id}: {e}")
 
+    async def check_user_in_room(self, user_id: UserID, room_id: RoomID) -> bool:
+        try:
+            members = await self.retry(self.client.get_room_members, room_id)
+            return user_id in members
+        except Exception as e:
+            self.log.error(f"Failed to check if user {user_id} is in room {room_id}: {e}")
+            return False
+
     @event.on(InternalEventType.JOIN)
     async def greet(self, evt: StateEvent) -> None:
         self.log.debug(f"User {evt.sender} joined room {evt.room_id}")
@@ -68,8 +76,13 @@ class Greeter(Plugin):
                 self.log.debug("Ignoring state event")
                 return
             else:
-                self.log.debug("Waiting 7 seconds before sending the welcome message")
-                await asyncio.sleep(7)
+                self.log.debug("Waiting 10 seconds before sending the welcome message")
+                await asyncio.sleep(10)
+                
+                # Check if user is present in the room
+                if not await self.check_user_in_room(evt.sender, evt.room_id):
+                    self.log.debug(f"User {evt.sender} is not present in room {evt.room_id}")
+                    return
                 
                 nick = self.client.parse_user_id(evt.sender)[0]
                 user_link = f'<a href="https://matrix.to/#/{evt.sender}">{nick}</a>'
